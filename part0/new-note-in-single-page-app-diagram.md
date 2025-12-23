@@ -1,4 +1,4 @@
-## Flow 1
+## New note in Single page app diagram
 ```mermaid
 sequenceDiagram
     participant user

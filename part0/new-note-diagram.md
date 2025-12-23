@@ -1,4 +1,4 @@
-## Flow 1
+## New note diagram
 ```mermaid
 sequenceDiagram
     participant user

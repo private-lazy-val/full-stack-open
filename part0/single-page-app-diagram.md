@@ -1,4 +1,4 @@
-## Flow 1
+## Single page app diagram
 ```mermaid
 sequenceDiagram
     participant browser
