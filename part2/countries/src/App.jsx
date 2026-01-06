@@ -4,10 +4,21 @@ import CountrySearch from "./components/country-search.jsx";
 import CountriesList from "./components/countries-list.jsx";
 import CountryData from "./components/country-data.jsx";
 
+const toCountryView = (data) => ({
+    name: data.name?.common ?? '—',
+    capital: data.capital?.[0] ?? '—',
+    area: data.area ?? 0,
+    languages: data.languages ? Object.values(data.languages) : [],
+    flag: data.flags?.svg ?? data.flags?.png ?? '',
+    alt: data.flags?.alt ?? `Flag of ${data.name?.common ?? `the country`}`,
+    lat: data.capitalInfo?.latlng?.[0] ?? null,
+    lon: data.capitalInfo?.latlng?.[1] ?? null,
+});
+
 function App() {
     const [countries, setCountries] = useState([])
     const [countryStr, setCountryStr] = useState('')
-    const [countryData, setCountryData] = useState(null)
+    const [selectedCountry, setSelectedCountry] = useState(null)
 
     // Fetch all countries once
     useEffect(() => {
@@ -24,20 +35,25 @@ function App() {
 
     }, [countries, filter])
 
-    const selectedCountry =
-        filteredCountries.length === 1 ? filteredCountries[0] : null
 
-    const handleShowCountryData = ((name) => {
-        countryService.getCountryDataByName(name)
-            .then((data) => {
-            setCountryData(data)
-        });
-    })
+    // auto-show when exactly 1 match
+    useEffect(() => {
+        if (filteredCountries.length === 1) {
+            setSelectedCountry(toCountryView(filteredCountries[0]))
+        } else {
+            // if user changes filter, remove previous selection
+            setSelectedCountry(null)
+        }
+    }, [filteredCountries]);
+
+    const handleShowCountryData = (country) => {
+        setSelectedCountry(toCountryView(country))
+    }
     const handleHideCountryData = () => {
-        setCountryData(null)
+        setSelectedCountry(null)
     }
 
-    const handleCountrySearch = (e) => {
+    const handleSearchCountry = (e) => {
         setCountryStr(e.target.value)
     }
 
@@ -45,7 +61,7 @@ function App() {
         <>
             <CountrySearch
                 countryStr={countryStr}
-                handleCountrySearch={handleCountrySearch}/>
+                handleCountrySearch={handleSearchCountry}/>
 
             {filteredCountries.length > 10 && (
                 <p>Too many matches, specify another filter</p>
@@ -56,10 +72,11 @@ function App() {
                     countries={filteredCountries}
                     onShow={handleShowCountryData}
                     onHide={handleHideCountryData}
-                    countryData={countryData}
+                    selectedCountry={selectedCountry}
                 />
             )}
-            {selectedCountry && <CountryData country={selectedCountry}/>}
+            {filteredCountries.length === 1 && selectedCountry && (
+                <CountryData country={selectedCountry}/>)}
         </>
     )
 }
