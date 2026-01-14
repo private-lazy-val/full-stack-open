@@ -1,0 +1,1 @@
+GET https://full-stack-open-fe5w.onrender.com/info

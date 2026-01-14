@@ -1,0 +1,7 @@
+POST https://full-stack-open-fe5w.onrender.com/api/persons
+Content-Type: application/json
+
+{
+  "name": "Valentina",
+  "number": "123-456"
+}

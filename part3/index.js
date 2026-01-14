@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require('cors')
+const path = require('path')
 
 const morgan = require('morgan')
 
@@ -16,6 +17,8 @@ morgan.token('body', (req) => {
 })
 
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
+
+app.use(express.static(path.join(__dirname, 'dist')))
 
 let phonebook = [
     {
@@ -40,8 +43,8 @@ let phonebook = [
     }
 ]
 
-app.get('/', (request, response) => {
-    response.send('<h1>Hello World!</h1>')
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'))
 })
 
 app.get('/api/persons', (request, response) => {
@@ -104,6 +107,10 @@ app.post('/api/persons', (request, response) => {
     phonebook = phonebook.concat(newPerson)
 
     response.status(201).json(newPerson)
+})
+
+app.get(/^(?!\/api).*/, (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'))
 })
 
 const PORT = process.env.PORT || 3001
