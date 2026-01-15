@@ -1,119 +1,141 @@
 const express = require('express')
 const cors = require('cors')
+const mongoose = require('mongoose')
 const path = require('path')
 
-const morgan = require('morgan')
+const {PORT, MONGODB_URI} = require('./utils/config')
+const {requestLogger, unknownEndpoint, errorHandler} = require('./utils/middleware')
+const Person = require('./models/person')
 
 const app = express()
 
 app.use(express.json())
 app.use(cors())
-// custom token that logs POST body
-morgan.token('body', (req) => {
-    if (req.method === 'POST') {
-        return JSON.stringify(req.body)
-    }
-    return ''
-})
-
-app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
-
+app.use(requestLogger)
 app.use(express.static(path.join(__dirname, 'dist')))
 
-let phonebook = [
-    {
-        "id": "1",
-        "name": "Arto Hellas",
-        "number": "040-123456"
-    },
-    {
-        "id": "2",
-        "name": "Ada Lovelace",
-        "number": "39-44-5323523"
-    },
-    {
-        "id": "3",
-        "name": "Dan Abramov",
-        "number": "12-43-234345"
-    },
-    {
-        "id": "4",
-        "name": "Mary Poppendieck",
-        "number": "39-23-6423122"
-    }
-]
+mongoose.set('strictQuery', false)
+mongoose
+    .connect(MONGODB_URI)
+    .then(() => {
+        console.log('connected to MongoDB')
+    })
+    .catch((error) => {
+        console.log('error connecting to MongoDB:', error.message)
+    })
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'))
-})
-
-app.get('/api/persons', (request, response) => {
-    response.json(phonebook)
-})
-
-app.get('/info', (request, response) => {
-    const time = new Date()
-
-    response.send(`
-    <p>Phonebook has info for ${phonebook.length} people</p>
-    <p>${time}</p>
-  `)
-})
-
-app.get('/api/persons/:id', (request, response) => {
-    const id = request.params.id
-    const person = phonebook.find(person => person.id === id)
-
-    if (person) {
-        response.json(person)
-    } else {
-        response.status(404).end()
+app.get('/api/persons', async (req, res, next) => {
+    try {
+        const persons = await Person.find({})
+        res.json(persons)
+    } catch (err) {
+        next(err)
     }
 })
 
-app.delete('/api/persons/:id', (request, response) => {
-    const id = request.params.id
-    phonebook = phonebook.filter(person => person.id !== id)
-
-    response.status(204).end()
+app.get('/info', async (req, res, next) => {
+    try {
+        const count = await Person.countDocuments({})
+        res.send(`
+      <p>Phonebook has info for ${count} people</p>
+      <p>${new Date()}</p>
+    `)
+    } catch (err) {
+        next(err)
+    }
 })
 
-const generateId = () => {
-    return String(Math.floor(Math.random() * 1_000_000_000))
-}
+app.get('/api/persons/:id', async (req, res, next) => {
+    try {
+        const person = await Person.findById(req.params.id)
 
-app.post('/api/persons', (request, response) => {
-    const body = request.body
-
-    const name = body.name?.trim()
-    const number = body.number?.trim()
-
-    if (!name || !number) {
-        return response.status(400).json({
-            error: 'name or number missing'
-        })
+        if (!person) {
+            return res.status(404).json({error: 'person not found'})
+        }
+        res.json(person)
+    } catch (err) {
+        next(err)
     }
+})
 
-    if (phonebook.some(p => p.name.toLowerCase() === name.toLowerCase())) {
-        return response.status(400).json({ error: 'name must be unique' })
+app.post('/api/persons', async (req, res, next) => {
+    try {
+        const name = req.body.name?.trim()
+        const number = req.body.number?.trim()
+
+        if (!name || !number) {
+            return res.status(400).json({error: 'name or number missing'})
+        }
+
+        const person = new Person({name, number})
+        const savedPerson = await person.save()
+
+        res.status(201).json(savedPerson)
+    } catch (err) {
+        next(err)
     }
+})
 
-    const newPerson = {
-        name: name,
-        number: number,
-        id: generateId(),
+app.put('/api/persons/:id', async (req, res, next) => {
+    try {
+        const id = req.params.id
+
+        const name = req.body.name?.trim()
+        const number = req.body.number?.trim()
+
+        if (!name || !number) {
+            return res.status(400).json({error: 'name or number missing'})
+        }
+
+        const existingPerson = await Person.findById(id)
+
+        if (!existingPerson) {
+            return res.status(404).json({error: 'person not found'})
+        }
+
+        // name must match exactly
+        if (existingPerson.name.toLowerCase() !== name.toLowerCase()) {
+            return res.status(400).json({
+                error: 'name cannot be changed',
+            })
+        }
+
+        if (existingPerson.number === number) {
+            return res.status(400).json({
+                error: 'number is the same as before',
+            })
+        }
+
+        existingPerson.number = number
+        const savedPerson = await existingPerson.save()
+
+        res.json(savedPerson)
+    } catch (err) {
+        next(err)
     }
+})
 
-    phonebook = phonebook.concat(newPerson)
+app.delete('/api/persons/:id', async (req, res, next) => {
+    try {
+        const deleted = await Person.findByIdAndDelete(req.params.id)
 
-    response.status(201).json(newPerson)
+        if (!deleted) {
+            return res.status(404).json({error: 'person not found'})
+        }
+
+        res.status(204).end()
+    } catch (err) {
+        next(err)
+    }
 })
 
 app.get(/^(?!\/api).*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'))
 })
 
-const PORT = process.env.PORT || 3001
+app.use(unknownEndpoint)
+app.use(errorHandler)
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
 })

@@ -80,11 +80,10 @@ const App = () => {
                     setNewNumber('')
                     showNotification(`Updated ${returnedPerson.name}`, 'success')
                 })
-                .catch(() => {
-                    showNotification(
-                        `Information of ${existingPerson.name} has already been removed from the server`,
-                        'error'
-                    )
+                .catch((error) => {
+                    const message = error.response?.data?.error
+                        || `Information of ${existingPerson.name} has already been removed from the server`
+                    showNotification(message, 'error')
                     setPersons((prev) => prev.filter(p => p.id !== existingPerson.id))
                     setNewName('')
                     setNewNumber('')
@@ -102,6 +101,10 @@ const App = () => {
                 setNewName('')
                 setNewNumber('')
                 showNotification(`Added ${returnedPerson.name}`, 'success')
+            })
+            .catch((error) => {
+                const message = error.response?.data?.error || 'something went wrong'
+                showNotification(message, 'error')
             });
     }
 

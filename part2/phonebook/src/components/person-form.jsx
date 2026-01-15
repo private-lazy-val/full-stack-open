@@ -8,7 +8,6 @@ const PersonForm = ({handleSubmit, newName, handleNameChange, newNumber, handleN
             </div>
             <div>
                 number: <input value={newNumber}
-                               type={'number'}
                                onChange={handleNumberChange}/></div>
             <div>
                 <button type="submit">add</button>
