@@ -21,7 +21,7 @@ mongoose
       number: String,
     })
 
-    // Model name Person -> collection becomes "people" (Mongoose pluralizes)
+    // Model name a Person -> collection becomes "people" (Mongoose pluralizes)
     const Person = mongoose.model('Person', personSchema)
 
     if (process.argv.length === 3) {

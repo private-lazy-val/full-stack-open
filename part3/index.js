@@ -67,6 +67,13 @@ app.post('/api/persons', async (req, res, next) => {
       return res.status(400).json({ error: 'name or number missing' })
     }
 
+    const existingPerson = await Person.findOne({ name })
+
+    // If a person exists
+    if (existingPerson) {
+      return res.status(409).json({ error: `${name} is already added to phonebook` })
+    }
+
     const person = new Person({ name, number })
     const savedPerson = await person.save()
 
@@ -133,8 +140,6 @@ app.get(/^(?!\/api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'))
 })
 
-console.log('typeof errorHandler:', typeof errorHandler)
-console.log('errorHandler.length:', errorHandler?.length)
 app.use(unknownEndpoint)
 app.use(errorHandler)
 

@@ -84,9 +84,14 @@ const App = () => {
                     const message = error.response?.data?.error
                         || `Information of ${existingPerson.name} has already been removed from the server`
                     showNotification(message, 'error')
-                    setPersons((prev) => prev.filter(p => p.id !== existingPerson.id))
-                    setNewName('')
-                    setNewNumber('')
+
+                    if (message === 'number is the same as before' || message === 'name cannot be changed') {
+                        personService.getAll().then(setPersons)
+                    } else { // person was deleted from the server
+                        setPersons((prev) => prev.filter(p => p.id !== existingPerson.id))
+                        setNewName('')
+                        setNewNumber('')
+                    }
                 })
             return
         }
@@ -104,6 +109,11 @@ const App = () => {
             })
             .catch((error) => {
                 const message = error.response?.data?.error || 'something went wrong'
+                if (error.response?.status === 409) { // already exists
+                    personService.getAll().then(setPersons)
+                    setNewName('')
+                    setNewNumber('')
+                }
                 showNotification(message, 'error')
             });
     }
